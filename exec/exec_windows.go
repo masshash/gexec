@@ -12,11 +12,11 @@ const (
 )
 
 func (c *Cmd) start() error {
-	if err := c.Cmd.Start(); err != nil {
+	if err := c.cmd.Start(); err != nil {
 		return err
 	}
 
-	c.ProcessGroup = newProcessGroup(c.Cmd.Process)
+	c.ProcessGroup = newProcessGroup(c.cmd.Process)
 	if err := assignProcessToJobObject(c.ProcessGroup); err != nil {
 		c.ProcessGroup.err = err
 	}

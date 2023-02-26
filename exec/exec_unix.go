@@ -7,16 +7,16 @@ import (
 )
 
 func (c *Cmd) start() error {
-	if c.Cmd.SysProcAttr != nil {
-		c.Cmd.SysProcAttr.Setpgid = true
+	if c.cmd.SysProcAttr != nil {
+		c.cmd.SysProcAttr.Setpgid = true
 	} else {
-		c.Cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+		c.cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	}
 
-	if err := c.Cmd.Start(); err != nil {
+	if err := c.cmd.Start(); err != nil {
 		return err
 	}
 
-	c.ProcessGroup = newProcessGroup(c.Cmd.Process)
+	c.ProcessGroup = newProcessGroup(c.cmd.Process)
 	return nil
 }

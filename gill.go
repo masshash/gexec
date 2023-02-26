@@ -7,6 +7,6 @@ import (
 )
 
 func Command(name string, arg ...string) *gillExec.Cmd {
-	c := exec.Command(name, arg...)
-	return &gillExec.Cmd{Cmd: c}
+	cmd := exec.Command(name, arg...)
+	return gillExec.NewCmd(cmd)
 }
