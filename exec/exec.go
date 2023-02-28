@@ -4,24 +4,24 @@ import (
 	"os/exec"
 )
 
-type Cmd struct {
+type CmdWrapper struct {
 	cmd          *exec.Cmd
 	cancel       func() error
 	ProcessGroup *ProcessGroup
 }
 
-func (c *Cmd) Start() error {
-	return c.start()
+func (cw *CmdWrapper) Start() error {
+	return cw.start()
 }
 
-func (c *Cmd) Wait() error {
-	return c.cmd.Wait()
+func (cw *CmdWrapper) Wait() error {
+	return cw.cmd.Wait()
 }
 
-func (c *Cmd) SetCancelHandler(handler func() error) {
-	c.cmd.Cancel = handler
+func (cw *CmdWrapper) SetCancelHandler(handler func() error) {
+	cw.cmd.Cancel = handler
 }
 
-func NewCmd(cmd *exec.Cmd) *Cmd {
-	return &Cmd{cmd: cmd}
+func NewCmdWrapper(cmd *exec.Cmd) *CmdWrapper {
+	return &CmdWrapper{cmd: cmd}
 }

@@ -7,16 +7,16 @@ import (
 	gillExec "github.com/masshash/gill/exec"
 )
 
-func Command(name string, arg ...string) *gillExec.Cmd {
+func Command(name string, arg ...string) *gillExec.CmdWrapper {
 	cmd := exec.Command(name, arg...)
-	return gillExec.NewCmd(cmd)
+	return gillExec.NewCmdWrapper(cmd)
 }
 
-func CommandContext(ctx context.Context, name string, arg ...string) *gillExec.Cmd {
+func CommandContext(ctx context.Context, name string, arg ...string) *gillExec.CmdWrapper {
 	cmd := exec.CommandContext(ctx, name, arg...)
-	gcmd := gillExec.NewCmd(cmd)
-	gcmd.SetCancelHandler(func() error {
-		return gcmd.ProcessGroup.Kill()
+	cw := gillExec.NewCmdWrapper(cmd)
+	cw.SetCancelHandler(func() error {
+		return cw.ProcessGroup.Kill()
 	})
-	return gcmd
+	return cw
 }

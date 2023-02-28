@@ -11,14 +11,14 @@ const (
 	accessRight_PROCESS_TERMINATE = 0x0001
 )
 
-func (c *Cmd) start() error {
-	if err := c.cmd.Start(); err != nil {
+func (cw *CmdWrapper) start() error {
+	if err := cw.cmd.Start(); err != nil {
 		return err
 	}
 
-	c.ProcessGroup = newProcessGroup(c.cmd.Process)
-	if err := assignProcessToJobObject(c.ProcessGroup); err != nil {
-		c.ProcessGroup.err = err
+	cw.ProcessGroup = newProcessGroup(cw.cmd.Process)
+	if err := assignProcessToJobObject(cw.ProcessGroup); err != nil {
+		cw.ProcessGroup.err = err
 	}
 
 	return nil
