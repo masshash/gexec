@@ -1,4 +1,4 @@
-module github.com/masshash/gill
+module github.com/masshash/gexec
 
 go 1.20
 
