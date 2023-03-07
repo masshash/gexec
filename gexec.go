@@ -15,6 +15,13 @@ func (gc *GroupedCmd) Start() error {
 	return gc.start()
 }
 
+func (gc *GroupedCmd) Run() error {
+	if err := gc.Start(); err != nil {
+		return err
+	}
+	return gc.Wait()
+}
+
 func (gc *GroupedCmd) SignalAll(sig os.Signal) error {
 	return gc.signalAll(sig)
 }
