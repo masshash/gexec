@@ -17,12 +17,12 @@ const (
 	PROCESS_TERMINATE = 0x0001
 )
 
-func (gc *GroupedCmd) start() error {
-	if err := gc.Cmd.Start(); err != nil {
+func (c *GroupedCmd) start() error {
+	if err := c.Cmd.Start(); err != nil {
 		return err
 	}
-	gc.jobObject = newJobObject()
-	assignProcessToJobObject(gc.Cmd.Process, gc.jobObject)
+	c.jobObject = newJobObject()
+	assignProcessToJobObject(c.Cmd.Process, c.jobObject)
 	return nil
 }
 
@@ -48,10 +48,10 @@ func assignProcessToJobObject(process *os.Process, job *jobObject) {
 	}
 }
 
-func (gc *GroupedCmd) signalAll(sig os.Signal) error {
+func (c *GroupedCmd) signalAll(sig os.Signal) error {
 	if sig != os.Kill {
 		return errors.New("unsupported signal type")
 	}
 
-	return gc.jobObject.terminate()
+	return c.jobObject.terminate()
 }

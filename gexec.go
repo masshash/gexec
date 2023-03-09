@@ -1,8 +1,11 @@
 package gexec
 
 import (
+	"bytes"
+	"errors"
 	"os"
 	"os/exec"
+	"strconv"
 )
 
 type GroupedCmd struct {
@@ -11,15 +14,29 @@ type GroupedCmd struct {
 	jobObject *jobObject
 }
 
-func (gc *GroupedCmd) Start() error {
-	return gc.start()
+func Grouped(cmd *exec.Cmd) *GroupedCmd {
+	return &GroupedCmd{Cmd: cmd}
 }
 
-func (gc *GroupedCmd) Run() error {
-	if err := gc.Start(); err != nil {
+func (c *GroupedCmd) Start() error {
+	return c.start()
+}
+
+func (c *GroupedCmd) Run() error {
+	if err := c.Start(); err != nil {
 		return err
 	}
-	return gc.Wait()
+	return c.Wait()
+}
+
+func (c *GroupedCmd) SignalAll(sig os.Signal) error {
+	return c.signalAll(sig)
+}
+
+func (c *GroupedCmd) KillAll() error {
+	return c.SignalAll(os.Kill)
+}
+
 }
 
 func (gc *GroupedCmd) SignalAll(sig os.Signal) error {
