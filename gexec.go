@@ -37,6 +37,9 @@ func (c *GroupedCmd) KillAll() error {
 	return c.SignalAll(os.Kill)
 }
 
+// Output runs the command and returns its standard output.
+// Any returned error will usually be of type *ExitError.
+// If c.Stderr was nil, Output populates ExitError.Stderr.
 func (c *GroupedCmd) Output() ([]byte, error) {
 	if c.Stdout != nil {
 		return nil, errors.New("exec: Stdout already set")
@@ -56,6 +59,22 @@ func (c *GroupedCmd) Output() ([]byte, error) {
 		}
 	}
 	return stdout.Bytes(), err
+}
+
+// CombinedOutput runs the command and returns its combined standard
+// output and standard error.
+func (c *GroupedCmd) CombinedOutput() ([]byte, error) {
+	if c.Stdout != nil {
+		return nil, errors.New("exec: Stdout already set")
+	}
+	if c.Stderr != nil {
+		return nil, errors.New("exec: Stderr already set")
+	}
+	var b bytes.Buffer
+	c.Stdout = &b
+	c.Stderr = &b
+	err := c.Run()
+	return b.Bytes(), err
 }
 
 // prefixSuffixSaver is an io.Writer which retains the first N bytes
