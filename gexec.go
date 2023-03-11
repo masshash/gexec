@@ -11,7 +11,7 @@ import (
 type GroupedCmd struct {
 	*exec.Cmd
 	pgid      int
-	jobObject *jobObject
+	JobObject *jobObject
 }
 
 func Grouped(cmd *exec.Cmd) *GroupedCmd {
