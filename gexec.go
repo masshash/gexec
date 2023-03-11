@@ -11,7 +11,7 @@ import (
 type GroupedCmd struct {
 	*exec.Cmd
 	pgid      int
-	JobObject *jobObject
+	jobObject *jobObject
 }
 
 func Grouped(cmd *exec.Cmd) *GroupedCmd {
@@ -35,6 +35,14 @@ func (c *GroupedCmd) SignalAll(sig os.Signal) error {
 
 func (c *GroupedCmd) KillAll() error {
 	return c.SignalAll(os.Kill)
+}
+
+func (c *GroupedCmd) Pgid() int {
+	return c.pgid
+}
+
+func (c *GroupedCmd) JobObject() *jobObject {
+	return c.jobObject
 }
 
 // Output runs the command and returns its standard output.
