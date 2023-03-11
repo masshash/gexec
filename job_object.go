@@ -6,6 +6,6 @@ import (
 
 type jobObject struct {
 	handle uintptr
-	err    error
+	Err    error
 	sigMu  sync.RWMutex
 }

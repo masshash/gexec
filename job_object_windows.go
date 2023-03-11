@@ -13,6 +13,13 @@ import (
 
 const NULL = 0
 
+// process-specific access rights.
+// https://learn.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights
+const (
+	PROCESS_SET_QUOTA = 0x0100
+	PROCESS_TERMINATE = 0x0001
+)
+
 func newJobObject() *jobObject {
 	job := &jobObject{handle: NULL}
 	runtime.SetFinalizer(job, (*jobObject).close)
@@ -27,6 +34,32 @@ func checkValidJobHandle(jobHandle windows.Handle) error {
 		return errors.New("job object not initialized")
 	}
 	return nil
+}
+
+func (job *jobObject) assignProcess(process *os.Process) {
+	if job == nil {
+		return
+	}
+
+	procHandle, err := windows.OpenProcess(PROCESS_SET_QUOTA|PROCESS_TERMINATE, false, uint32(process.Pid))
+	if err != nil {
+		job.Err = os.NewSyscallError("OpenProcess", err)
+		return
+	}
+	defer windows.CloseHandle(procHandle)
+
+	jobHandle, err := windows.CreateJobObject(nil, nil)
+	if err != nil {
+		job.Err = os.NewSyscallError("CreateJobObject", err)
+		return
+	}
+	job.handle = uintptr(jobHandle)
+
+	err = windows.AssignProcessToJobObject(jobHandle, procHandle)
+	if err != nil {
+		defer job.close()
+		job.Err = os.NewSyscallError("AssignProcessToJobObject", err)
+	}
 }
 
 func (job *jobObject) close() error {
