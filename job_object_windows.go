@@ -31,7 +31,7 @@ func checkValidJobHandle(jobHandle windows.Handle) error {
 		return errors.New("job object already closed")
 	}
 	if jobHandle == NULL {
-		return errors.New("job object not initialized")
+		return errors.New("job object not created")
 	}
 	return nil
 }

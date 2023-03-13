@@ -28,7 +28,7 @@ func (c *GroupedCmd) signalAll(sig os.Signal) error {
 		return errors.New("invalid process group id")
 	}
 	if c.pgid == 0 {
-		return errors.New("process group not initialized")
+		return errors.New("process group id not assigned")
 	}
 	s, ok := sig.(syscall.Signal)
 	if !ok {
