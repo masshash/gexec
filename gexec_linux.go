@@ -66,7 +66,6 @@ func (c *GroupedCmd) processes() ([]*os.Process, error) {
 			processes = append(processes, p)
 		}
 	}
-
 	return processes, nil
 }
 
@@ -83,6 +82,7 @@ func readPidsFromProc() ([]int, error) {
 	if err != nil {
 		return nil, err
 	}
+
 	for _, fname := range fnames {
 		pid, err := strconv.ParseInt(fname, 10, 32)
 		if err != nil {
@@ -91,6 +91,5 @@ func readPidsFromProc() ([]int, error) {
 		}
 		ret = append(ret, int(pid))
 	}
-
 	return ret, nil
 }
