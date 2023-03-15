@@ -6,7 +6,10 @@ package gexec
 import (
 	"errors"
 	"os"
+	"strconv"
 	"syscall"
+
+	"golang.org/x/sys/unix"
 )
 
 func (c *GroupedCmd) start() error {
@@ -23,16 +26,71 @@ func (c *GroupedCmd) start() error {
 	return nil
 }
 
-func (c *GroupedCmd) signalAll(sig os.Signal) error {
-	if c.pgid == -1 {
+func checkValidPgid(pgid int) error {
+	if pgid == -1 {
 		return errors.New("invalid process group id")
 	}
-	if c.pgid == 0 {
+	if pgid == 0 {
 		return errors.New("process group id not assigned")
 	}
+	return nil
+}
+
+func (c *GroupedCmd) signalAll(sig os.Signal) error {
+	if err := checkValidPgid(c.pgid); err != nil {
+		return err
+	}
+
 	s, ok := sig.(syscall.Signal)
 	if !ok {
 		return errors.New("unsupported signal type")
 	}
 	return syscall.Kill(-c.pgid, s)
+}
+
+func (c *GroupedCmd) processes() ([]*os.Process, error) {
+	if err := checkValidPgid(c.pgid); err != nil {
+		return nil, err
+	}
+
+	pids, err := readPidsFromProc()
+	if err != nil {
+		return nil, err
+	}
+
+	var processes []*os.Process
+	for _, pid := range pids {
+		findPgid, err := unix.Getpgid(pid)
+		if err == nil && findPgid == c.pgid {
+			p, _ := os.FindProcess(pid)
+			processes = append(processes, p)
+		}
+	}
+
+	return processes, nil
+}
+
+func readPidsFromProc() ([]int, error) {
+	var ret []int
+
+	d, err := os.Open("/proc")
+	if err != nil {
+		return nil, err
+	}
+	defer d.Close()
+
+	fnames, err := d.Readdirnames(-1)
+	if err != nil {
+		return nil, err
+	}
+	for _, fname := range fnames {
+		pid, err := strconv.ParseInt(fname, 10, 32)
+		if err != nil {
+			// if not numeric name, just skip
+			continue
+		}
+		ret = append(ret, int(pid))
+	}
+
+	return ret, nil
 }

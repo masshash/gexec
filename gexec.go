@@ -45,6 +45,10 @@ func (c *GroupedCmd) JobObject() *jobObject {
 	return c.jobObject
 }
 
+func (c *GroupedCmd) Processes() ([]*os.Process, error) {
+	return c.processes()
+}
+
 // Output runs the command and returns its standard output.
 // Any returned error will usually be of type *ExitError.
 // If c.Stderr was nil, Output populates ExitError.Stderr.
