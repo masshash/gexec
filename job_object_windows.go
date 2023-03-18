@@ -20,6 +20,14 @@ const (
 	PROCESS_TERMINATE = 0x0001
 )
 
+const JobObjectBasicProcessIdList = 3
+
+type JOBOBJECT_BASIC_PROCESS_ID_LIST struct {
+	NumberOfAssignedProcesses uint32
+	NumberOfProcessIdsInList  uint32
+	ProcessIdList             [1]uintptr
+}
+
 func newJobObject() *jobObject {
 	job := &jobObject{handle: NULL}
 	runtime.SetFinalizer(job, (*jobObject).close)
