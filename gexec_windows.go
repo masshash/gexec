@@ -26,6 +26,5 @@ func (c *GroupedCmd) signalAll(sig os.Signal) error {
 }
 
 func (c *GroupedCmd) processes() ([]*os.Process, error) {
-	// TODO: implement soon
-	return nil, nil
+	return c.jobObject.processes()
 }
