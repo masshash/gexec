@@ -6,7 +6,9 @@ package gexec
 import (
 	"errors"
 	"os"
+	"reflect"
 	"runtime"
+	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
@@ -99,4 +101,66 @@ func (job *jobObject) terminate() error {
 		return os.NewSyscallError("TerminateJobObject", err)
 	}
 	return nil
+}
+
+func (job *jobObject) processes() ([]*os.Process, error) {
+	job.sigMu.RLock()
+	defer job.sigMu.RUnlock()
+
+	jobHandle := windows.Handle(job.handle)
+	if err := checkValidJobHandle(jobHandle); err != nil {
+		return nil, err
+	}
+
+	info := JOBOBJECT_BASIC_PROCESS_ID_LIST{}
+	err := windows.QueryInformationJobObject(
+		jobHandle,
+		JobObjectBasicProcessIdList,
+		uintptr(unsafe.Pointer(&info)),
+		uint32(unsafe.Sizeof(info)),
+		nil,
+	)
+
+	// This is either the case where there is only one process or no processes in
+	// the job. Any other case will result in ERROR_MORE_DATA. Check if info.NumberOfProcessIdsInList
+	// is 1 and just return this, otherwise return an empty slice.
+	if err == nil {
+		if info.NumberOfProcessIdsInList == 1 {
+			if p, err := os.FindProcess(int(info.ProcessIdList[0])); err == nil {
+				return []*os.Process{p}, nil
+			}
+		}
+		// Return empty slice instead of nil to play well with the caller of this.
+		// Do not return an error if no processes are running inside the job
+		return []*os.Process{}, nil
+	}
+
+	if err != windows.ERROR_MORE_DATA {
+		return nil, os.NewSyscallError("QueryInformationJobObject", err)
+	}
+
+	adjustedInfoSize := unsafe.Sizeof(info) + (unsafe.Sizeof(info.ProcessIdList[0]) * uintptr(info.NumberOfAssignedProcesses-1))
+	buf := make([]byte, adjustedInfoSize)
+	if err = windows.QueryInformationJobObject(
+		jobHandle,
+		JobObjectBasicProcessIdList,
+		uintptr(unsafe.Pointer(&buf[0])),
+		uint32(len(buf)),
+		nil,
+	); err != nil {
+		return nil, os.NewSyscallError("QueryInformationJobObject", err)
+	}
+
+	processIdList := make([]uintptr, info.NumberOfAssignedProcesses)
+	dataOffset := int(unsafe.Sizeof(info.NumberOfAssignedProcesses) + unsafe.Sizeof(info.NumberOfProcessIdsInList))
+	(*reflect.SliceHeader)(unsafe.Pointer(&processIdList)).Data = uintptr(unsafe.Pointer(&buf[dataOffset]))
+
+	processes := []*os.Process{}
+	for _, pid := range processIdList {
+		if p, err := os.FindProcess(int(pid)); err == nil {
+			processes = append(processes, p)
+		}
+	}
+
+	return processes, nil
 }
