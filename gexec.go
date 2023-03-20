@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"sync"
 )
 
 type GroupedCmd struct {
@@ -47,6 +48,29 @@ func (c *GroupedCmd) JobObject() *jobObject {
 
 func (c *GroupedCmd) Processes() ([]*os.Process, error) {
 	return c.processes()
+}
+
+func (c *GroupedCmd) WaitAll() error {
+	var wg sync.WaitGroup
+	for {
+		processes, err := c.Processes()
+		if err != nil {
+			return err
+		}
+		if len(processes) == 0 {
+			break
+		}
+
+		for _, p := range processes {
+			wg.Add(1)
+			go func(p *os.Process) {
+				defer wg.Done()
+				p.Wait()
+			}(p)
+		}
+		wg.Wait()
+	}
+	return nil
 }
 
 // Output runs the command and returns its standard output.
