@@ -20,6 +20,9 @@ func Grouped(cmd *exec.Cmd) *GroupedCmd {
 }
 
 func (c *GroupedCmd) Start() error {
+	if c.Process != nil {
+		return errors.New("already started")
+	}
 	return c.start()
 }
 
