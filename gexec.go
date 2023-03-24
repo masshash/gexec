@@ -68,7 +68,11 @@ func (c *GroupedCmd) WaitAll() error {
 			wg.Add(1)
 			go func(p *os.Process) {
 				defer wg.Done()
-				p.Wait()
+				if p.Pid != c.Process.Pid {
+					p.Wait()
+				} else {
+					c.Wait()
+				}
 			}(p)
 		}
 		wg.Wait()
