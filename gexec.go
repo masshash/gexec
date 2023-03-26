@@ -2,6 +2,7 @@ package gexec
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"os"
 	"os/exec"
@@ -54,30 +55,68 @@ func (c *GroupedCmd) Processes() ([]*os.Process, error) {
 }
 
 func (c *GroupedCmd) WaitAll() error {
-	var wg sync.WaitGroup
-	for {
-		processes, err := c.Processes()
-		if err != nil {
-			return err
-		}
-		if len(processes) == 0 {
-			break
-		}
+	return c.WaitAllWithContext(context.Background(), os.Kill)
+}
 
-		for _, p := range processes {
-			wg.Add(1)
-			go func(p *os.Process) {
-				defer wg.Done()
-				if p.Pid != c.Process.Pid {
-					p.Wait()
-				} else {
-					c.Wait()
-				}
-			}(p)
-		}
-		wg.Wait()
+func (c *GroupedCmd) WaitAllWithContext(ctx context.Context, sig os.Signal) error {
+	if ctx == nil {
+		panic("nil Context")
 	}
-	return nil
+	var mainWg sync.WaitGroup
+	var sigMu sync.RWMutex
+	var processes []*os.Process
+	var err error
+	waitDone := make(chan struct{})
+
+	go func() {
+		select {
+		case <-ctx.Done():
+			sigMu.Lock()
+			for _, p := range processes {
+				p.Signal(sig)
+			}
+			sigMu.Unlock()
+		case <-waitDone:
+		}
+	}()
+
+	mainWg.Add(1)
+	go func() {
+		defer mainWg.Done()
+		var subWg sync.WaitGroup
+
+		for {
+			sigMu.Lock()
+			select {
+			case <-ctx.Done():
+				sigMu.Unlock()
+				return
+			default:
+			}
+			processes, err = c.Processes()
+			sigMu.Unlock()
+			if err != nil || len(processes) == 0 {
+				return
+			}
+
+			for _, p := range processes {
+				subWg.Add(1)
+				go func(p *os.Process) {
+					defer subWg.Done()
+					if p.Pid != c.Process.Pid {
+						p.Wait()
+					} else {
+						c.Wait()
+					}
+				}(p)
+			}
+			subWg.Wait()
+		}
+	}()
+	mainWg.Wait()
+	waitDone <- struct{}{}
+
+	return err
 }
 
 // Output runs the command and returns its standard output.
