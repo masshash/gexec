@@ -103,7 +103,7 @@ func (job *jobObject) terminate() error {
 	return nil
 }
 
-func (job *jobObject) processes() ([]*os.Process, error) {
+func (job *jobObject) processes() ([]*Process, error) {
 	job.sigMu.RLock()
 	defer job.sigMu.RUnlock()
 
@@ -127,12 +127,12 @@ func (job *jobObject) processes() ([]*os.Process, error) {
 	if err == nil {
 		if info.NumberOfProcessIdsInList == 1 {
 			if p, err := os.FindProcess(int(info.ProcessIdList[0])); err == nil {
-				return []*os.Process{p}, nil
+				return []*Process{{Process: p}}, nil
 			}
 		}
 		// Return empty slice instead of nil to play well with the caller of this.
 		// Do not return an error if no processes are running inside the job
-		return []*os.Process{}, nil
+		return []*Process{}, nil
 	}
 
 	if err != windows.ERROR_MORE_DATA {
@@ -155,10 +155,10 @@ func (job *jobObject) processes() ([]*os.Process, error) {
 	dataOffset := int(unsafe.Sizeof(info.NumberOfAssignedProcesses) + unsafe.Sizeof(info.NumberOfProcessIdsInList))
 	(*reflect.SliceHeader)(unsafe.Pointer(&processIdList)).Data = uintptr(unsafe.Pointer(&buf[dataOffset]))
 
-	processes := []*os.Process{}
+	processes := []*Process{}
 	for _, pid := range processIdList {
 		if p, err := os.FindProcess(int(pid)); err == nil {
-			processes = append(processes, p)
+			processes = append(processes, &Process{Process: p})
 		}
 	}
 

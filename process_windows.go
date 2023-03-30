@@ -4,6 +4,8 @@
 package gexec
 
 func (p *Process) tryWait() error {
-	// implement soon
+	if _, err := p.Wait(); err != nil {
+		return err
+	}
 	return nil
 }

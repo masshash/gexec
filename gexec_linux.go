@@ -48,7 +48,7 @@ func (c *GroupedCmd) signalAll(sig os.Signal) error {
 	return syscall.Kill(-c.pgid, s)
 }
 
-func (c *GroupedCmd) processes() ([]*os.Process, error) {
+func (c *GroupedCmd) processes() ([]*Process, error) {
 	if err := checkValidPgid(c.pgid); err != nil {
 		return nil, err
 	}
@@ -58,12 +58,12 @@ func (c *GroupedCmd) processes() ([]*os.Process, error) {
 		return nil, err
 	}
 
-	var processes []*os.Process
+	var processes []*Process
 	for _, pid := range pids {
 		findPgid, err := unix.Getpgid(pid)
 		if err == nil && findPgid == c.pgid {
 			p, _ := os.FindProcess(pid)
-			processes = append(processes, p)
+			processes = append(processes, &Process{Process: p})
 		}
 	}
 	return processes, nil

@@ -8,6 +8,8 @@ import (
 	"os/exec"
 	"strconv"
 	"sync"
+	"sync/atomic"
+	"time"
 )
 
 type GroupedCmd struct {
@@ -50,7 +52,7 @@ func (c *GroupedCmd) JobObject() *jobObject {
 	return c.jobObject
 }
 
-func (c *GroupedCmd) Processes() ([]*os.Process, error) {
+func (c *GroupedCmd) Processes() ([]*Process, error) {
 	return c.processes()
 }
 
@@ -64,8 +66,8 @@ func (c *GroupedCmd) WaitAllWithContext(ctx context.Context, sig os.Signal) erro
 	}
 	var mainWg sync.WaitGroup
 	var sigMu sync.RWMutex
-	var processes []*os.Process
-	var err error
+	var processes []*Process
+	var returnErr error
 	waitDone := make(chan struct{})
 
 	go func() {
@@ -84,7 +86,6 @@ func (c *GroupedCmd) WaitAllWithContext(ctx context.Context, sig os.Signal) erro
 	go func() {
 		defer mainWg.Done()
 		var subWg sync.WaitGroup
-
 		for {
 			sigMu.Lock()
 			select {
@@ -93,30 +94,39 @@ func (c *GroupedCmd) WaitAllWithContext(ctx context.Context, sig os.Signal) erro
 				return
 			default:
 			}
-			processes, err = c.Processes()
+			processes, returnErr = c.Processes()
 			sigMu.Unlock()
-			if err != nil || len(processes) == 0 {
+			if returnErr != nil || len(processes) == 0 {
 				return
 			}
 
+			var errcnt uint32
 			for _, p := range processes {
 				subWg.Add(1)
-				go func(p *os.Process) {
+				go func(p *Process) {
 					defer subWg.Done()
-					if p.Pid != c.Process.Pid {
-						p.Wait()
+					var err error
+					if p.Pid == c.Process.Pid {
+						err = c.Wait()
 					} else {
-						c.Wait()
+						err = p.TryWait()
+					}
+					if err != nil {
+						atomic.AddUint32(&errcnt, 1)
 					}
 				}(p)
 			}
 			subWg.Wait()
+
+			if errcnt > 0 {
+				time.Sleep(time.Millisecond * 250)
+			}
 		}
 	}()
 	mainWg.Wait()
 	waitDone <- struct{}{}
 
-	return err
+	return returnErr
 }
 
 // Output runs the command and returns its standard output.

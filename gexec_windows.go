@@ -25,6 +25,6 @@ func (c *GroupedCmd) signalAll(sig os.Signal) error {
 	return c.jobObject.terminate()
 }
 
-func (c *GroupedCmd) processes() ([]*os.Process, error) {
+func (c *GroupedCmd) processes() ([]*Process, error) {
 	return c.jobObject.processes()
 }
