@@ -60,12 +60,27 @@ func (c *GroupedCmd) WaitAll() error {
 	return c.WaitAllWithContext(context.Background(), os.Kill)
 }
 
+func signalEachProcess(processes []*Process, sig os.Signal, mu *sync.RWMutex) {
+	mu.Lock()
+	defer mu.Unlock()
+
+	var wg sync.WaitGroup
+	for _, p := range processes {
+		wg.Add(1)
+		go func(p *Process) {
+			defer wg.Done()
+			p.Signal(sig)
+		}(p)
+	}
+	wg.Wait()
+}
+
 func (c *GroupedCmd) WaitAllWithContext(ctx context.Context, sig os.Signal) error {
 	if ctx == nil {
 		panic("nil Context")
 	}
 	var mainWg sync.WaitGroup
-	var sigMu sync.RWMutex
+	var mu sync.RWMutex
 	var processes []*Process
 	var returnErr error
 	waitDone := make(chan struct{})
@@ -73,11 +88,9 @@ func (c *GroupedCmd) WaitAllWithContext(ctx context.Context, sig os.Signal) erro
 	go func() {
 		select {
 		case <-ctx.Done():
-			sigMu.Lock()
-			for _, p := range processes {
-				p.Signal(sig)
-			}
-			sigMu.Unlock()
+			signalEachProcess(processes, sig, &mu)
+			c.SignalAll(sig)
+			<-waitDone
 		case <-waitDone:
 		}
 	}()
@@ -87,15 +100,15 @@ func (c *GroupedCmd) WaitAllWithContext(ctx context.Context, sig os.Signal) erro
 		defer mainWg.Done()
 		var subWg sync.WaitGroup
 		for {
-			sigMu.Lock()
+			mu.Lock()
 			select {
 			case <-ctx.Done():
-				sigMu.Unlock()
+				mu.Unlock()
 				return
 			default:
 			}
 			processes, returnErr = c.Processes()
-			sigMu.Unlock()
+			mu.Unlock()
 			if returnErr != nil || len(processes) == 0 {
 				return
 			}
