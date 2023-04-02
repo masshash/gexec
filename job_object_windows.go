@@ -15,13 +15,6 @@ import (
 
 const NULL = 0
 
-// process-specific access rights.
-// https://learn.microsoft.com/en-us/windows/win32/procthread/process-security-and-access-rights
-const (
-	PROCESS_SET_QUOTA = 0x0100
-	PROCESS_TERMINATE = 0x0001
-)
-
 const JobObjectBasicProcessIdList = 3
 
 type JOBOBJECT_BASIC_PROCESS_ID_LIST struct {
@@ -51,7 +44,7 @@ func (job *jobObject) assignProcess(process *os.Process) {
 		return
 	}
 
-	procHandle, err := windows.OpenProcess(PROCESS_SET_QUOTA|PROCESS_TERMINATE, false, uint32(process.Pid))
+	procHandle, err := windows.OpenProcess(windows.PROCESS_SET_QUOTA|windows.PROCESS_TERMINATE, false, uint32(process.Pid))
 	if err != nil {
 		job.Err = os.NewSyscallError("OpenProcess", err)
 		return
